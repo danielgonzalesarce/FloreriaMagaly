@@ -285,6 +285,13 @@ export default function App() {
         if (doc.exists()) {
           setUserProfile(doc.data() as UserProfile);
         }
+      }, (error) => {
+        if (error.code === 'permission-denied') {
+          console.warn('Permission denied for user profile snapshot. This might be normal during initial login if the profile is being created.');
+        } else {
+          console.error('Error in user profile snapshot:', error);
+          handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
+        }
       });
       return () => unsubscribe();
     } else {
@@ -432,8 +439,9 @@ export default function App() {
       // but the user is actually an admin (race condition). 
       // We handle it gracefully by logging but not crashing if possible.
       if (error.code === 'permission-denied') {
-        console.warn("Permission denied for arrangements list. Retrying with filtered query if not already.");
+        console.warn("Permission denied for arrangements list. Query:", isAdmin ? "Admin (all)" : "Filtered (active only)");
       } else {
+        console.error('Error in arrangements list snapshot:', error);
         handleFirestoreError(error, OperationType.LIST, 'arrangements');
       }
     });
@@ -487,11 +495,13 @@ export default function App() {
     window.open(`https://wa.me/51936068781?text=${encodeURIComponent(message)}`, '_blank');
   };
 
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   const seedDatabase = async () => {
     if (!isAdmin) return;
     
-    // Using a custom confirmation state or just proceeding since it's a test data loader
     setLoading(true);
+    setSuccessMessage(null);
 
     const initialData = [
       // --- RAMOS ---
@@ -506,23 +516,30 @@ export default function App() {
     ];
 
     try {
+      console.log('Starting database seed...');
       // Clear existing arrangements first
       const snapshot = await getDocs(collection(db, 'arrangements'));
+      console.log(`Found ${snapshot.size} existing arrangements to delete.`);
       const deletePromises = snapshot.docs.map(docSnapshot => 
         deleteDoc(doc(db, 'arrangements', docSnapshot.id))
       );
       await Promise.all(deletePromises);
+      console.log('Existing arrangements deleted.');
 
       // Add new arrangements
+      console.log(`Adding ${initialData.length} new arrangements...`);
       for (const item of initialData) {
         await addDoc(collection(db, 'arrangements'), {
           ...item,
           createdAt: serverTimestamp()
         });
       }
+      console.log('Database seeded successfully!');
       setLoading(false);
-      // Optional: show a toast notification here instead of alert
+      setSuccessMessage('Base de datos cargada con éxito');
+      setTimeout(() => setSuccessMessage(null), 5000);
     } catch (error) {
+      console.error('Error seeding database:', error);
       setLoading(false);
       handleFirestoreError(error, OperationType.CREATE, 'arrangements');
     }
@@ -642,14 +659,22 @@ export default function App() {
                       {isEditing ? <Edit className="w-6 h-6 text-rose-500" /> : <Plus className="w-6 h-6 text-rose-500" />}
                       {isEditing ? 'Editar Arreglo' : 'Nuevo Arreglo'}
                     </h2>
-                    <button 
-                      type="button"
-                      onClick={seedDatabase}
-                      className="text-sm bg-rose-50 text-rose-600 px-4 py-2 rounded-xl font-bold hover:bg-rose-100 transition-colors flex items-center gap-2"
-                    >
-                      <ImageIcon className="w-4 h-4" />
-                      Cargar Datos de Prueba
-                    </button>
+                    <div className="flex items-center gap-4">
+                      {successMessage && (
+                        <span className="text-green-600 text-sm font-medium flex items-center gap-1 animate-pulse">
+                          <Check className="w-4 h-4" />
+                          {successMessage}
+                        </span>
+                      )}
+                      <button 
+                        type="button"
+                        onClick={seedDatabase}
+                        className="text-sm bg-rose-50 text-rose-600 px-4 py-2 rounded-xl font-bold hover:bg-rose-100 transition-colors flex items-center gap-2"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                        Cargar Datos de Prueba
+                      </button>
+                    </div>
                   </div>
                   <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">

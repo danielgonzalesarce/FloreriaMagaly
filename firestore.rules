@@ -33,14 +33,15 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && 
-        request.auth.token.email == "daniel.gonzales.a@tecsup.edu.pe";
+        request.auth.token.get('email', '') == "daniel.gonzales.a@tecsup.edu.pe" &&
+        request.auth.token.get('email_verified', false) == true;
     }
 
     function isValidArrangement(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.price is number && data.price >= 0 &&
              data.imageUrl is string && data.imageUrl.size() < 1000 &&
-             data.active is bool &&
+             'active' in data && data.active is bool &&
              (!('description' in data) || (data.description is string && data.description.size() < 1000)) &&
              (!('category' in data) || (data.category is string && data.category.size() < 50));
     }
@@ -56,7 +57,7 @@ service cloud.firestore {
 
     match /arrangements/{arrangementId} {
       // Publicly readable if active
-      allow read: if resource.data.active == true || isAdmin();
+      allow read: if (resource != null && 'active' in resource.data && resource.data.active == true) || isAdmin();
       
       // Only admins can write
       allow create: if isAdmin() && isValidArrangement(request.resource.data);
@@ -70,11 +71,15 @@ service cloud.firestore {
       
       // Only admins can create/update users, or a user can create their own 'user' profile if it doesn't exist
       allow create: if isAuthenticated() && (
-        (request.auth.uid == userId && request.resource.data.role == 'user' && request.resource.data.email == request.auth.token.email) ||
+        (request.auth.uid == userId && request.resource.data.role == 'user' && request.resource.data.get('email', '') == request.auth.token.get('email', '')) ||
         isAdmin()
       ) && isValidUser(request.resource.data);
       
       allow update: if isAdmin() && isValidUser(request.resource.data);
+    }
+
+    match /test/connection {
+      allow read: if true;
     }
   }
 }
