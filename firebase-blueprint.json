@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "Arrangement": {
+      "title": "Arreglo Floral",
+      "description": "Un arreglo floral disponible en el catálogo.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Nombre del arreglo"
+        },
+        "description": {
+          "type": "string",
+          "description": "Descripción detallada"
+        },
+        "price": {
+          "type": "number",
+          "description": "Precio en soles"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL de la imagen"
+        },
+        "category": {
+          "type": "string",
+          "description": "Categoría (Rosas, Girasoles, etc.)"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Si el producto está visible"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Fecha de creación"
+        }
+      },
+      "required": ["name", "price", "imageUrl", "active"]
+    },
+    "User": {
+      "title": "Usuario",
+      "description": "Perfil de usuario (Admin)",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "user"]
+        }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "arrangements": {
+      "schema": "Arrangement",
+      "description": "Colección de arreglos florales"
+    },
+    "users": {
+      "schema": "User",
+      "description": "Colección de usuarios y roles"
+    }
+  }
+}
